@@ -1,0 +1,53 @@
+replicaCount: 1
+
+namespaceOverride: ""
+
+containerPort: 8080
+servicePort: 8080
+
+image:
+  tag: latest
+
+serviceAccount:
+  create: true
+
+route:
+  enabled: true
+  host: ""
+
+labels:
+  sidecar.istio.io/inject: "true"
+  sidecar.istio.io/proxyCPU: "100m"
+  sidecar.istio.io/proxyCPULimit: "100m"
+  sidecar.istio.io/proxyMemory: "120M"
+  sidecar.istio.io/proxyMemoryLimit: "120M"
+
+build:
+  enabled: true
+  git:
+    uri: "https://github.com/glaceroy/servicemesh-apps.git"
+    ref: main
+    contextDir: ""
+  dockerfilePath: Dockerfile
+  sourceSecret: git-secret
+
+resources:
+  limits:
+    cpu: "500m"
+    memory: "512Mi"
+  requests:
+    cpu: "200m"
+    memory: "256Mi"
+
+readinessProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 5
+  periodSeconds: 10
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 15
+  periodSeconds: 20

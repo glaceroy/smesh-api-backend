@@ -1,0 +1,15 @@
+{{- if .Values.route.enabled }}
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: {{ include "common-api.fullname" . }}
+spec:
+  host: {{ .Values.route.host }}
+  to:
+    kind: Service
+    name: ig{{ .Values.gateway.id }}
+  port:
+    targetPort: 8443
+  tls:
+    termination: passthrough
+{{- end }}

@@ -1,0 +1,52 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: api-applicationset
+  namespace: openshift-gitops
+spec:
+  generators:
+    - list:
+        elements:
+          - name: api-cricket
+            namespace: lbg-ocp-servicemesh-3-400-lab
+            valuesFile: environments/external-api/api-cricket.yaml
+
+          - name: api-f1
+            namespace: lbg-ocp-servicemesh-3-400-lab
+            valuesFile: environments/external-api/api-f1.yaml
+
+          - name: api-football
+            namespace: lbg-ocp-servicemesh-3-400-lab
+            valuesFile: environments/external-api/api-football.yaml
+
+          - name: api-tennis
+            namespace: lbg-ocp-servicemesh-3-400-lab
+            valuesFile: environments/external-api/api-tennis.yaml
+
+          - name: api-dashboard
+            namespace: lbg-ocp-smesh-dashboard-500-lab
+            valuesFile: environments/frontend-api/api-dashboard.yaml
+
+  template:
+    metadata:
+      name: '{{name}}'
+      labels:
+        app-type: test-library
+        team: servicemesh
+    spec:
+      project: test-library
+      source:
+        repoURL: https://github.com/glaceroy/servicemesh-apps.git
+        targetRevision: main
+        path: gitops/charts/common
+        helm:
+          valueFiles:
+            - ../../{{valuesFile}}
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: '{{namespace}}'
+      syncPolicy:
+        syncOptions:
+        - CreateNamespace=false
+        - ServerSideApply=true
+        - ApplyOutOfSyncOnly=true

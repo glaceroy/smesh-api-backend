@@ -1,0 +1,31 @@
+image:
+  repository: image-registry.openshift-image-registry.svc:5000/lbg-ocp-smesh-dashboard-500-lab/api-dashboard
+  tag: latest
+
+route:
+  host: api-dashboard.ocp.cloud.lab
+
+build:
+  git:
+    contextDir: "api-dashboard"
+
+certificate:
+  duration: 2880h
+  renewBefore: 720h
+  commonName: api-dashboard.ocp.cloud.lab
+  dnsNames:
+    - api-dashboard.ocp.cloud.lab
+  issuerName: vault-cluster-issuer
+  issuerKind: ClusterIssuer
+  keyAlgorithm: RSA
+  keySize: 2048
+
+tls:
+  mode: SIMPLE
+
+gateway:
+  enabled: true
+  id: "005"
+
+virtualservice:
+  enabled: true

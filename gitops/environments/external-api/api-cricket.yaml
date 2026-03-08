@@ -1,0 +1,21 @@
+image:
+  repository: image-registry.openshift-image-registry.svc:5000/lbg-ocp-servicemesh-3-400-lab/api-cricket
+  tag: latest
+
+route:
+  host: cricket-api.ocp.cloud.lab
+
+build:
+  git:
+    contextDir: "api-cricket"
+
+certificate:
+  duration: 2880h
+  renewBefore: 720h
+  commonName: cricket-api.ocp.cloud.lab
+  dnsNames:
+    - cricket-api.ocp.cloud.lab
+  issuerName: vault-cluster-issuer
+  issuerKind: ClusterIssuer
+  keyAlgorithm: RSA
+  keySize: 2048
