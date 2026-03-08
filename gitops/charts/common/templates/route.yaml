@@ -7,7 +7,7 @@ spec:
   host: {{ .Values.route.host }}
   to:
     kind: Service
-    name: ig{{ .Values.gateway.id }}
+    name: {{ include "common-api.fullname" . }}
   port:
     targetPort: 8443
   tls:
