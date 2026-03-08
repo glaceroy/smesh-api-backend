@@ -20,7 +20,7 @@ spec:
       serviceAccountName: {{ include "common-api.fullname" . }}
       containers:
         - name: {{ .Release.Name }}
-          image: "{{ .Values.image.repository }}/{{ namespace }}/{{ include "common-api.fullname" . }}:{{ .Values.image.tag }}"
+          image: "{{ .Values.image.repository }}/{{ .Release.Namespace }}/{{ include "common-api.fullname" . }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - containerPort: {{ .Values.containerPort }}
