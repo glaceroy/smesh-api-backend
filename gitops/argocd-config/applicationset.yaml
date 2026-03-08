@@ -9,23 +9,19 @@ spec:
         elements:
           - name: api-cricket
             namespace: lbg-ocp-servicemesh-3-400-lab
-            valuesFile: environments/external-api/api-cricket.yaml
+            valuesFile: environments/api-backend/api-cricket.yaml
 
           - name: api-f1
             namespace: lbg-ocp-servicemesh-3-400-lab
-            valuesFile: environments/external-api/api-f1.yaml
+            valuesFile: environments/api-backend/api-f1.yaml
 
           - name: api-football
             namespace: lbg-ocp-servicemesh-3-400-lab
-            valuesFile: environments/external-api/api-football.yaml
+            valuesFile: environments/api-backend/api-football.yaml
 
           - name: api-tennis
             namespace: lbg-ocp-servicemesh-3-400-lab
-            valuesFile: environments/external-api/api-tennis.yaml
-
-          - name: api-dashboard
-            namespace: lbg-ocp-smesh-dashboard-500-lab
-            valuesFile: environments/frontend-api/api-dashboard.yaml
+            valuesFile: environments/api-backend/api-tennis.yaml
 
   template:
     metadata:
@@ -36,7 +32,7 @@ spec:
     spec:
       project: test-library
       source:
-        repoURL: https://github.com/glaceroy/servicemesh-apps.git
+        repoURL: https://github.com/glaceroy/smesh-api-backend.git
         targetRevision: main
         path: gitops/charts/common
         helm:

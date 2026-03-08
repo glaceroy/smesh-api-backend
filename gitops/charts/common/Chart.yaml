@@ -1,5 +1,5 @@
 apiVersion: v2
-name: ServiceMesh Apps
+name: smesh api backend
 description: Helm chart to deploy multiple microservice APIs
 type: application
 version: 0.1.0
