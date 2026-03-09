@@ -7,8 +7,9 @@ WORKDIR /app
 # Copy dependency manifests first (better layer caching)
 COPY package*.json ./
 
-# Install only production dependencies
-RUN npm install --omit=dev && \
+# Install curl and netcat + production dependencies
+RUN apk add --no-cache curl netcat-openbsd && \
+    npm install --omit=dev && \
     npm cache clean --force
 
 # Copy application source

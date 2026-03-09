@@ -1,6 +1,6 @@
 const express = require('express');
 const app = express();
-const PORT = process.env.PORT || 8080;
+const PORT = process.env.PORT || 8443;
 
 app.use(express.json());
 
@@ -86,6 +86,7 @@ const champions = [
   { year: 2022, driver: "Max Verstappen",     team: "Red Bull" },
   { year: 2023, driver: "Max Verstappen",     team: "Red Bull" },
   { year: 2024, driver: "Max Verstappen",     team: "Red Bull" },
+  { year: 2025, driver: "Lando Norris",       team: "McLaren" },
 ];
 
 app.get('/health', (req, res) => res.json({ status: 'ok', service: 'Formula 1 Champions API', timestamp: new Date().toISOString() }));

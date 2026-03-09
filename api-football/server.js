@@ -1,6 +1,6 @@
 const express = require('express');
 const app = express();
-const PORT = process.env.PORT || 8080;
+const PORT = process.env.PORT || 8443;
 
 app.use(express.json());
 
@@ -42,6 +42,7 @@ const champions = [
   { year: "2021-22", team: "Manchester City",    manager: "Pep Guardiola" },
   { year: "2022-23", team: "Manchester City",    manager: "Pep Guardiola" },
   { year: "2023-24", team: "Manchester City",    manager: "Pep Guardiola" },
+  { year: "2024-25", team: "Liverpool",          manager: "Arne Slot" },
 ];
 
 app.get('/health', (req, res) => res.json({ status: 'ok', service: 'Premier League Champions API', timestamp: new Date().toISOString() }));

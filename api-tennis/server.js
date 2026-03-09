@@ -1,6 +1,6 @@
 const express = require('express');
 const app = express();
-const PORT = process.env.PORT || 8080;
+const PORT = process.env.PORT || 8443;
 
 app.use(express.json());
 
@@ -27,6 +27,8 @@ const champions = [
   { year: 2022, tournament: "Australian Open", winner: "Rafael Nadal",      nationality: "Spain" },
   { year: 2023, tournament: "Australian Open", winner: "Novak Djokovic",    nationality: "Serbia" },
   { year: 2024, tournament: "Australian Open", winner: "Jannik Sinner",     nationality: "Italy" },
+  { year: 2025, tournament: "Australian Open", winner: "Jannik Sinner",     nationality: "Italy" },
+  { year: 2026, tournament: "Australian Open", winner: "Carlos Alcaraz",    nationality: "Spain" },
   // French Open
   { year: 2010, tournament: "French Open",     winner: "Rafael Nadal",      nationality: "Spain" },
   { year: 2011, tournament: "French Open",     winner: "Rafael Nadal",      nationality: "Spain" },
@@ -43,6 +45,7 @@ const champions = [
   { year: 2022, tournament: "French Open",     winner: "Rafael Nadal",      nationality: "Spain" },
   { year: 2023, tournament: "French Open",     winner: "Novak Djokovic",    nationality: "Serbia" },
   { year: 2024, tournament: "French Open",     winner: "Carlos Alcaraz",    nationality: "Spain" },
+  { year: 2025, tournament: "French Open",     winner: "Carlos Alcaraz",    nationality: "Spain" },
   // Wimbledon
   { year: 2010, tournament: "Wimbledon",       winner: "Rafael Nadal",      nationality: "Spain" },
   { year: 2011, tournament: "Wimbledon",       winner: "Novak Djokovic",    nationality: "Serbia" },
@@ -58,6 +61,7 @@ const champions = [
   { year: 2022, tournament: "Wimbledon",       winner: "Novak Djokovic",    nationality: "Serbia" },
   { year: 2023, tournament: "Wimbledon",       winner: "Carlos Alcaraz",    nationality: "Spain" },
   { year: 2024, tournament: "Wimbledon",       winner: "Carlos Alcaraz",    nationality: "Spain" },
+  { year: 2025, tournament: "Wimbledon",       winner: "Jannik Sinner",     nationality: "Italy" },
   // US Open
   { year: 2010, tournament: "US Open",         winner: "Rafael Nadal",      nationality: "Spain" },
   { year: 2011, tournament: "US Open",         winner: "Novak Djokovic",    nationality: "Serbia" },
@@ -74,6 +78,7 @@ const champions = [
   { year: 2022, tournament: "US Open",         winner: "Carlos Alcaraz",    nationality: "Spain" },
   { year: 2023, tournament: "US Open",         winner: "Novak Djokovic",    nationality: "Serbia" },
   { year: 2024, tournament: "US Open",         winner: "Jannik Sinner",     nationality: "Italy" },
+  { year: 2025, tournament: "US Open",         winner: "Carlos Alcaraz",    nationality: "Spain" },  
 ];
 
 app.get('/health', (req, res) => res.json({ status: 'ok', service: 'Tennis Grand Slam Champions API', timestamp: new Date().toISOString() }));

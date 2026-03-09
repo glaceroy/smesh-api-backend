@@ -1,6 +1,6 @@
 const express = require('express');
 const app = express();
-const PORT = process.env.PORT || 8080;
+const PORT = process.env.PORT || 8443;
 
 app.use(express.json());
 
@@ -34,6 +34,7 @@ const champions = [
   { year: 2021, winner: "Australia",    format: "T20 World Cup",  venue: "UAE" },
   { year: 2022, winner: "England",      format: "T20 World Cup",  venue: "Australia" },
   { year: 2024, winner: "India",        format: "T20 World Cup",  venue: "West Indies & USA" },
+  { year: 2026, winner: "India",        format: "T20 World Cup",  venue: "India & Sri Lanka" },
 ];
 
 app.get('/health', (req, res) => res.json({ status: 'ok', service: 'Cricket World Cup Champions API', timestamp: new Date().toISOString() }));
