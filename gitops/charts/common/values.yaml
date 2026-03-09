@@ -2,8 +2,8 @@ replicaCount: 1
 
 namespaceOverride: ""
 
-containerPort: 8080
-servicePort: 8080
+containerPort: 8443
+servicePort: 8443
 
 image:
   tag: latest
