@@ -35,12 +35,12 @@ resources:
 readinessProbe:
   httpGet:
     path: /health
-    port: 8080
+    port: 8443
   initialDelaySeconds: 5
   periodSeconds: 10
 livenessProbe:
   httpGet:
     path: /health
-    port: 8080
+    port: 8443
   initialDelaySeconds: 15
   periodSeconds: 20
