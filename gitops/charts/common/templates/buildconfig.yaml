@@ -12,8 +12,8 @@ spec:
       name: "{{ include "common-api.fullname" . }}:{{ .Values.image.tag }}"
   resources:
 {{ toYaml .Values.resources | indent 4 }}
-  successfulBuildsHistoryLimit: 5
-  failedBuildsHistoryLimit: 5
+  successfulBuildsHistoryLimit: 1
+  failedBuildsHistoryLimit: 1
   strategy:
     type: Docker
     dockerStrategy:
