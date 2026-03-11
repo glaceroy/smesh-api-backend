@@ -8,6 +8,18 @@ servicePort: 8443
 image:
   tag: latest
 
+# ── TLS configuration ──────────────────────────────────────────────────────
+# mode:       "none"  → plain HTTP (no TLS)
+#             "tls"   → one-way HTTPS (server cert only)
+#             "mtls"  → mutual TLS   (server + CA verifies client cert)
+# ──────────────────────────────────────────────────────────────────────────
+tls:
+  mode: mtls
+  certDir: /etc/tls
+  certFile: tls.crt
+  keyFile: tls.key
+  caFile: ca.crt 
+
 serviceAccount:
   create: true
 

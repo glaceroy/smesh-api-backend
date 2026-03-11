@@ -24,6 +24,27 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - containerPort: {{ .Values.containerPort }}
+          env:
+            - name: PORT
+              value: {{ .Values.containerPort | quote }}
+            - name: TLS_MODE
+              value: {{ .Values.tls.mode | quote }}
+            - name: TLS_CERT_DIR
+              value: {{ .Values.tls.certDir | quote }}
+            - name: TLS_CERT_FILE
+              value: {{ .Values.tls.certFile | quote }}
+            - name: TLS_KEY_FILE
+              value: {{ .Values.tls.keyFile | quote }}
+            {{- if eq .Values.tls.mode "mtls" }}
+            - name: TLS_CA_FILE
+              value: {{ .Values.tls.caFile | quote }}
+            {{- end }}
+          volumeMounts:
+            {{- if ne .Values.tls.mode "none" }}
+            - name: tls-certs
+              mountPath: {{ .Values.tls.certDir }}
+              readOnly: true
+            {{- end }}
           {{- if .Values.livenessProbe }}
           livenessProbe:
             {{- toYaml .Values.livenessProbe | nindent 12 }}
@@ -34,3 +55,19 @@ spec:
           {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+        {{- if ne .Values.tls.mode "none" }}
+        - name: tls-certs
+          secret:
+            secretName: {{ include "common-api.fullname" . }}-tls
+            defaultMode: 0400
+            items:
+              - key: tls.crt
+                path: {{ .Values.tls.certFile }}
+              - key: tls.key
+                path: {{ .Values.tls.keyFile }}
+              {{- if eq .Values.tls.mode "mtls" }}
+              - key: ca.crt
+                path: {{ .Values.tls.caFile }}
+              {{- end }}
+        {{- end }}
