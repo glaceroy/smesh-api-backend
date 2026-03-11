@@ -11,5 +11,5 @@ spec:
   port:
     targetPort: 8443
   tls:
-    termination: edge
+    termination: passthrough
 {{- end }}
