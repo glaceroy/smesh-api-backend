@@ -121,4 +121,4 @@ app.get('/champions/:year', (req, res) => {
 });
 
 // ── Start server (TLS_MODE controls none / tls / mtls) ─────────────────────
-createServer(app, 'Formula 1 Champions API');
+const { mainServer, healthServer } = createServer(app, 'Formula 1 Champions API');

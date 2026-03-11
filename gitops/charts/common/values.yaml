@@ -8,9 +8,6 @@ ports:
   - name: health
     containerPort: 9090
     
-image:
-  tag: latest
-
 # ── TLS configuration ──────────────────────────────────────────────────────
 # mode:       "none"  → plain HTTP (no TLS)
 #             "tls"   → one-way HTTPS (server cert only)

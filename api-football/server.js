@@ -72,4 +72,4 @@ app.get('/champions', (req, res) => {
 });
 
 // ── Start server (TLS_MODE controls none / tls / mtls) ─────────────────────
-createServer(app, 'Premier League Champions API');
+const { mainServer, healthServer } = createServer(app, 'Premier League Champions API');
