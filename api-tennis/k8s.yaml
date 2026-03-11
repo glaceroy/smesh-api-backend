@@ -1,0 +1,226 @@
+# ══════════════════════════════════════════════════════════════════════════════
+#  Tennis API — Kubernetes Manifests
+#  Supports:  TLS_MODE=none | tls | mtls
+#
+#  Certificate source: Kubernetes Secret mounted as a volume at /etc/tls
+#
+#  Quick-start:
+#    1. Create your secret (see "Secret" section below)
+#    2. Set TLS_MODE env var in the Deployment
+#    3. kubectl apply -f tennis-api.yaml
+# ══════════════════════════════════════════════════════════════════════════════
+
+# ──────────────────────────────────────────────────────────────────────────────
+# SECRET  (example — replace with your real certs or use cert-manager)
+#
+#  Option A – Create manually:
+#    kubectl create secret generic tennis-api-tls \
+#      --from-file=tls.crt=./server.crt \
+#      --from-file=tls.key=./server.key \
+#      --from-file=ca.crt=./ca.crt \
+#      -n api-external
+#
+#  Option B – Use cert-manager Certificate resource (recommended for production)
+#
+#  The template below shows the secret structure for reference only.
+#  DO NOT store real certs as base64 in this file — use Vault / SealedSecrets.
+# ──────────────────────────────────────────────────────────────────────────────
+# apiVersion: v1
+# kind: Secret
+# metadata:
+#   name: tennis-api-tls
+#   namespace: api-external
+# type: kubernetes.io/tls
+# data:
+#   tls.crt: <base64-encoded-server-cert>
+#   tls.key: <base64-encoded-server-key>
+#   ca.crt:  <base64-encoded-ca-cert>        ← required for mTLS
+
+---
+# ──────────────────────────────────────────────────────────────────────────────
+# DEPLOYMENT
+# ──────────────────────────────────────────────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tennis-api
+  namespace: api-external
+  labels:
+    app: tennis-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: tennis-api
+  template:
+    metadata:
+      labels:
+        app: tennis-api
+    spec:
+      serviceAccountName: external-api-sa
+
+      # ── Non-root / unprivileged ──────────────────────────────────────────
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
+
+      containers:
+        - name: tennis-api
+          image: tennis-api:latest
+          imagePullPolicy: Always
+
+          ports:
+            - name: https
+              containerPort: 8443
+              protocol: TCP
+
+          # ── Environment variables ────────────────────────────────────────
+          env:
+            - name: PORT
+              value: "8443"
+
+            # ┌──────────────────────────────────────────────────────────────┐
+            # │  TLS_MODE controls the server's TLS behaviour:               │
+            # │    "none"  → plain HTTP (no TLS at all)                      │
+            # │    "tls"   → one-way TLS  (server cert only)                 │
+            # │    "mtls"  → mutual TLS   (server + CA to verify client)     │
+            # └──────────────────────────────────────────────────────────────┘
+            - name: TLS_MODE
+              value: "mtls"          # ← CHANGE THIS: none | tls | mtls
+
+            # Directory where the Secret volume is mounted
+            - name: TLS_CERT_DIR
+              value: "/etc/tls"
+
+            # Individual file names within the Secret (matches Secret keys)
+            - name: TLS_CERT_FILE
+              value: "tls.crt"
+            - name: TLS_KEY_FILE
+              value: "tls.key"
+            - name: TLS_CA_FILE
+              value: "ca.crt"         # Only read when TLS_MODE=mtls
+
+          # ── Volume mount — certs from Kubernetes Secret ──────────────────
+          volumeMounts:
+            - name: tls-certs
+              mountPath: /etc/tls    # Matches TLS_CERT_DIR above
+              readOnly: true
+
+          # ── Security ─────────────────────────────────────────────────────
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            capabilities:
+              drop: ["ALL"]
+
+          # ── Resources ────────────────────────────────────────────────────
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "200m"
+              memory: "128Mi"
+
+          # ── Probes ───────────────────────────────────────────────────────
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8443
+              scheme: HTTPS        # ← change to HTTP when TLS_MODE=none
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8443
+              scheme: HTTPS        # ← change to HTTP when TLS_MODE=none
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            failureThreshold: 3
+
+      # ── Volumes ────────────────────────────────────────────────────────────
+      volumes:
+        - name: tls-certs
+          secret:
+            secretName: tennis-api-tls   # Name of your Kubernetes Secret
+            defaultMode: 0400            # Read-only for owner only
+            items:
+              - key: tls.crt
+                path: tls.crt
+              - key: tls.key
+                path: tls.key
+              - key: ca.crt
+                path: ca.crt             # Omit this item if not using mTLS
+
+---
+# ──────────────────────────────────────────────────────────────────────────────
+# SERVICE
+# ──────────────────────────────────────────────────────────────────────────────
+apiVersion: v1
+kind: Service
+metadata:
+  name: tennis-api
+  namespace: api-external
+  labels:
+    app: tennis-api
+  annotations:
+    # Tell OpenShift / cloud LBs this is an HTTPS backend
+    service.beta.openshift.io/serving-cert-secret-name: tennis-api-tls
+spec:
+  selector:
+    app: tennis-api
+  ports:
+    - name: https
+      port: 8443
+      targetPort: 8443
+      protocol: TCP
+  type: ClusterIP
+
+---
+# ──────────────────────────────────────────────────────────────────────────────
+# OPENSHIFT ROUTE  (for TLS passthrough — lets mTLS work end-to-end)
+# ──────────────────────────────────────────────────────────────────────────────
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: tennis-api
+  namespace: api-external
+  labels:
+    app: tennis-api
+spec:
+  host: tennis-api.ocp.cloud.lab
+  to:
+    kind: Service
+    name: tennis-api
+  port:
+    targetPort: https
+  tls:
+    # passthrough: the Route forwards raw TLS to the pod.
+    # The pod itself terminates TLS → mTLS works end-to-end.
+    termination: passthrough
+    insecureEdgeTerminationPolicy: None
+
+---
+# ──────────────────────────────────────────────────────────────────────────────
+# CONFIGMAP — switch TLS mode without rebuilding the image
+# Update TLS_MODE here, then roll the Deployment:
+#   kubectl rollout restart deployment/tennis-api -n api-external
+# ──────────────────────────────────────────────────────────────────────────────
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tennis-api-config
+  namespace: api-external
+data:
+  # Valid values: none | tls | mtls
+  TLS_MODE: "mtls"
+  TLS_CERT_DIR: "/etc/tls"
+  TLS_CERT_FILE: "tls.crt"
+  TLS_KEY_FILE: "tls.key"
+  TLS_CA_FILE: "ca.crt"

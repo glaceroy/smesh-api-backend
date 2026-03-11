@@ -1,7 +1,7 @@
 {
-  "name": "api-football",
+  "name": "api-backed",
   "version": "1.0.0",
-  "description": "Football Champions API",
+  "description": "Sports Champions External APIs",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

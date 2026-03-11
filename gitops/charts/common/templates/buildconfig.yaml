@@ -18,6 +18,13 @@ spec:
     type: Docker
     dockerStrategy:
       dockerfilePath: {{ .Values.build.dockerfilePath }}
+      {{- if .Values.build.buildArgs }}
+      buildArgs:
+        {{- range .Values.build.buildArgs }}
+        - name: {{ .name }}
+          value: {{ .value | quote }}
+        {{- end }}
+      {{- end }}
   source:
     type: Git
     git:

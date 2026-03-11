@@ -1,13 +1,14 @@
 image:
   repository: image-registry.openshift-image-registry.svc:5000
-  tag: latest
+  tag: v1.0
 
 route:
   host: football-api.ocp.cloud.lab
 
 build:
-  git:
-    contextDir: "api-football"
+  buildArgs:
+  - name: API_DIR
+    value: api-cricket 
 
 certificate:
   duration: 2880h

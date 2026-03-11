@@ -1,13 +1,14 @@
 image:
   repository: image-registry.openshift-image-registry.svc:5000
-  tag: latest
+  tag: v1.0
 
 route:
   host: formula1-api.ocp.cloud.lab
 
 build:
-  git:
-    contextDir: "api-f1"
+  buildArgs:
+  - name: API_DIR
+    value: api-f1
 
 certificate:
   duration: 2880h

@@ -1,14 +1,24 @@
-const express = require('express');
-const app = express();
-const PORT = process.env.PORT || 8443;
+'use strict';
 
+const express = require('express');
+const { createServer, TLS_MODE } = require('./tls-helper');
+
+const app = express();
 app.use(express.json());
 
+// ── Request logger ─────────────────────────────────────────────────────────
 app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url} - IP: ${req.headers['x-forwarded-for'] || req.socket.remoteAddress}`);
+  const clientIP = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+  const tlsInfo  = req.socket.encrypted
+    ? (req.socket.getPeerCertificate && req.socket.getPeerCertificate().subject
+        ? `mTLS:${req.socket.getPeerCertificate().subject.CN}`
+        : 'TLS')
+    : 'HTTP';
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url} - IP: ${clientIP} - ${tlsInfo}`);
   next();
 });
 
+// ── Data ───────────────────────────────────────────────────────────────────
 const champions = [
   // ODI World Cup
   { year: 1975, winner: "West Indies",  format: "ODI World Cup",  venue: "England" },
@@ -37,7 +47,13 @@ const champions = [
   { year: 2026, winner: "India",        format: "T20 World Cup",  venue: "India & Sri Lanka" },
 ];
 
-app.get('/health', (req, res) => res.json({ status: 'ok', service: 'Cricket World Cup Champions API', timestamp: new Date().toISOString() }));
+// ── Routes ─────────────────────────────────────────────────────────────────
+app.get('/health', (req, res) => res.json({
+  status:    'ok',
+  service:   'Cricket World Cup Champions API',
+  tls_mode:  TLS_MODE,
+  timestamp: new Date().toISOString(),
+}));
 
 app.get('/champions', (req, res) => {
   const { winner, format } = req.query;
@@ -47,6 +63,5 @@ app.get('/champions', (req, res) => {
   res.json(data);
 });
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`[${new Date().toISOString()}] Cricket World Cup Champions API running on port ${PORT}`);
-});
+// ── Start server (TLS_MODE controls none / tls / mtls) ─────────────────────
+createServer(app, 'Cricket World Cup Champions API');

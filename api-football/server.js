@@ -1,14 +1,24 @@
-const express = require('express');
-const app = express();
-const PORT = process.env.PORT || 8443;
+'use strict';
 
+const express = require('express');
+const { createServer, TLS_MODE } = require('./tls-helper');
+
+const app = express();
 app.use(express.json());
 
+// ── Request logger ─────────────────────────────────────────────────────────
 app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url} - IP: ${req.headers['x-forwarded-for'] || req.socket.remoteAddress}`);
+  const clientIP = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+  const tlsInfo  = req.socket.encrypted
+    ? (req.socket.getPeerCertificate && req.socket.getPeerCertificate().subject
+        ? `mTLS:${req.socket.getPeerCertificate().subject.CN}`
+        : 'TLS')
+    : 'HTTP';
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url} - IP: ${clientIP} - ${tlsInfo}`);
   next();
 });
 
+// ── Data ───────────────────────────────────────────────────────────────────
 const champions = [
   { year: "1992-93", team: "Manchester United",  manager: "Alex Ferguson" },
   { year: "1993-94", team: "Manchester United",  manager: "Alex Ferguson" },
@@ -45,7 +55,13 @@ const champions = [
   { year: "2024-25", team: "Liverpool",          manager: "Arne Slot" },
 ];
 
-app.get('/health', (req, res) => res.json({ status: 'ok', service: 'Premier League Champions API', timestamp: new Date().toISOString() }));
+// ── Routes ─────────────────────────────────────────────────────────────────
+app.get('/health', (req, res) => res.json({
+  status:    'ok',
+  service:   'Premier League Champions API',
+  tls_mode:  TLS_MODE,
+  timestamp: new Date().toISOString(),
+}));
 
 app.get('/champions', (req, res) => {
   const { team, manager } = req.query;
@@ -55,6 +71,5 @@ app.get('/champions', (req, res) => {
   res.json(data);
 });
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`[${new Date().toISOString()}] Premier League Champions API running on port ${PORT}`);
-});
+// ── Start server (TLS_MODE controls none / tls / mtls) ─────────────────────
+createServer(app, 'Premier League Champions API');

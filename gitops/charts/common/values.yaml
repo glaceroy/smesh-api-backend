@@ -20,7 +20,7 @@ build:
   git:
     uri: "https://github.com/glaceroy/smesh-api-backend.git"
     ref: main
-    contextDir: ""
+    contextDir: "/"
   dockerfilePath: Dockerfile
   sourceSecret: git-secret
 
