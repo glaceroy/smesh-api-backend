@@ -1,6 +1,6 @@
 image:
   repository: image-registry.openshift-image-registry.svc:5000
-  tag: v1.0
+  tag: v1.1
 
 route:
   host: formula1-api.ocp.cloud.lab
