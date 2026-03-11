@@ -48,11 +48,13 @@ readinessProbe:
   httpGet:
     path: /health
     port: 8443
+    scheme: HTTPS
   initialDelaySeconds: 5
   periodSeconds: 10
 livenessProbe:
   httpGet:
     path: /health
     port: 8443
+    scheme: HTTPS
   initialDelaySeconds: 15
   periodSeconds: 20
