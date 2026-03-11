@@ -23,10 +23,15 @@ spec:
           image: "{{ .Values.image.repository }}/{{ .Release.Namespace }}/{{ include "common-api.fullname" . }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
-            - containerPort: {{ .Values.containerPort }}
+            {{- range .Values.ports }}
+            - name: {{ .name }}
+              containerPort: {{ .containerPort }}
+            {{- end }}
           env:
             - name: PORT
               value: {{ .Values.containerPort | quote }}
+            - name: HEALTH_PORT
+              value: {{ .Values.healthPort | quote }}
             - name: TLS_MODE
               value: {{ .Values.tls.mode | quote }}
             - name: TLS_CERT_DIR

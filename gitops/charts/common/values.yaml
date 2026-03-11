@@ -1,8 +1,13 @@
 replicaCount: 1
 
-containerPort: 8443
 servicePort: 8443
 
+ports:
+  - name: https
+    containerPort: 8443
+  - name: health
+    containerPort: 9090
+    
 image:
   tag: latest
 
@@ -44,15 +49,15 @@ resources:
 
 readinessProbe:
   httpGet:
-    path: /health
-    port: 9090
+    path: /healthz
+    port: 8080
     scheme: HTTP
   initialDelaySeconds: 5
   periodSeconds: 10
 livenessProbe:
   httpGet:
-    path: /health
-    port: 9090
+    path: /healthz
+    port: 8080
     scheme: HTTP
   initialDelaySeconds: 15
   periodSeconds: 20

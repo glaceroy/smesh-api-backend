@@ -1,19 +1,23 @@
 'use strict';
 
-const https = require('https');
-const http  = require('http');
-const fs    = require('fs');
-const path  = require('path');
+const https   = require('https');
+const http    = require('http');
+const fs      = require('fs');
+const path    = require('path');
+const express = require('express');
 
-const TLS_MODE  = (process.env.TLS_MODE  || 'mtls').toLowerCase();
-const CERT_DIR  =  process.env.TLS_CERT_DIR  || '/etc/tls';
-const CERT_FILE = path.join(CERT_DIR, process.env.TLS_CERT_FILE || 'tls.crt');
-const KEY_FILE  = path.join(CERT_DIR, process.env.TLS_KEY_FILE  || 'tls.key');
-const CA_FILE   = path.join(CERT_DIR, process.env.TLS_CA_FILE   || 'ca.crt');
-const PORT      = process.env.PORT || 8443;
+const TLS_MODE    = (process.env.TLS_MODE  || 'mtls').toLowerCase();
+const CERT_DIR    =  process.env.TLS_CERT_DIR  || '/etc/tls';
+const CERT_FILE   = path.join(CERT_DIR, process.env.TLS_CERT_FILE || 'tls.crt');
+const KEY_FILE    = path.join(CERT_DIR, process.env.TLS_KEY_FILE  || 'tls.key');
+const CA_FILE     = path.join(CERT_DIR, process.env.TLS_CA_FILE   || 'ca.crt');
+const PORT        = process.env.PORT        || 8443;
+const HEALTH_PORT = process.env.HEALTH_PORT || 8080;
 
-/** Health-check paths that bypass mTLS enforcement (Kubelet probes). */
-const HEALTH_PATHS = new Set(['/healthz', '/readyz', '/health']);
+/** Health-check paths that bypass mTLS enforcement on the main server. */
+const HEALTH_PATHS = new Set(['/health', '/healthz', '/readyz']);
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 /** Read a cert file, throw a clear error if missing. */
 function readCert(filePath, label) {
@@ -23,20 +27,20 @@ function readCert(filePath, label) {
   return fs.readFileSync(filePath);
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+
 /**
  * Middleware that enforces mTLS on every route EXCEPT health-check paths.
  *
  * Why not rejectUnauthorized:true at the TLS layer?
- * Because Node's TLS stack rejects the TCP handshake before the HTTP request
- * is even parsed — the Kubelet prober (which sends no client cert) would get
- * a TLS alert and the probe would fail.
- *
+ * Node rejects the TCP handshake before the HTTP request is even parsed —
+ * the Kubelet prober (no client cert) would get a TLS alert and fail.
  * Instead we set rejectUnauthorized:false so the handshake always completes,
- * then enforce the cert requirement here in userland for non-health routes.
+ * then enforce the cert requirement here in userland.
  */
 function mtlsEnforcer(req, res, next) {
   if (HEALTH_PATHS.has(req.path)) {
-    return next(); // ← Kubelet probes pass straight through
+    return next();
   }
 
   if (!req.socket.authorized) {
@@ -48,8 +52,11 @@ function mtlsEnforcer(req, res, next) {
   next();
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+
 /**
  * Attach a /whoami diagnostic route that returns client cert details.
+ * Useful for debugging mTLS handshakes.
  */
 function attachWhoami(app) {
   app.get('/whoami', (req, res) => {
@@ -74,49 +81,109 @@ function attachWhoami(app) {
   });
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Spin up a dedicated plain HTTP server on HEALTH_PORT for Kubelet probes.
+ *
+ * Kubelet sends no client cert, so it cannot reach an mTLS port.
+ * This server is intentionally minimal — it responds ONLY to health paths
+ * and returns 404 for everything else, so there is no accidental data exposure.
+ *
+ * Kubernetes probe config:
+ *   livenessProbe/readinessProbe:
+ *     httpGet:
+ *       path: /health
+ *       port: 9090        ← plain HTTP, no TLS
+ */
+function startHealthServer(serviceName) {
+  const ts         = () => new Date().toISOString();
+  const healthApp  = express();
+
+  healthApp.get(['/health', '/healthz', '/readyz'], (_req, res) => {
+    res.json({ status: 'ok' });
+  });
+
+  healthApp.use((_req, res) => {
+    res.status(404).json({ error: 'Not found on health port' });
+  });
+
+  const srv = http.createServer(healthApp);
+
+  srv.listen(HEALTH_PORT, '0.0.0.0', () => {
+    console.log(`[${ts()}] ${serviceName} health server  →  HTTP :${HEALTH_PORT}  (probes only)`);
+  });
+
+  srv.on('error', (err) => {
+    console.error(`[${ts()}] Health server error: ${err.message}`);
+    process.exit(1);
+  });
+
+  return srv;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 /**
  * createServer(app, serviceName)
  *
- * Boots an HTTP/HTTPS server and attaches TLS middleware to `app`.
- * Returns the raw node server instance.
+ * Boots the main HTTP/HTTPS server and a dedicated plain-HTTP health server.
+ * Returns { mainServer, healthServer }.
+ *
+ * Environment variables:
+ *   TLS_MODE      "none" | "tls" | "mtls"   (default: "mtls")
+ *   TLS_CERT_DIR  path to mounted Secret dir  (default: /etc/tls)
+ *   TLS_CERT_FILE server certificate filename  (default: tls.crt)
+ *   TLS_KEY_FILE  server private key filename  (default: tls.key)
+ *   TLS_CA_FILE   CA certificate filename      (default: ca.crt)
+ *   PORT          main listening port          (default: 8443)
+ *   HEALTH_PORT   probe listening port         (default: 9090)
  */
 function createServer(app, serviceName) {
   const ts = () => new Date().toISOString();
 
-  app.use((req, res, next) => {
+  // Stamp TLS mode onto every request for downstream logging
+  app.use((req, _res, next) => {
     req._tlsMode = TLS_MODE;
     next();
   });
 
-  // Register mTLS enforcer BEFORE any app routes so it runs first.
+  // mTLS enforcer must be registered BEFORE app routes
   if (TLS_MODE === 'mtls') {
     app.use(mtlsEnforcer);
   }
 
   attachWhoami(app);
 
-  let server;
+  let mainServer;
   let protocol;
 
   try {
     if (TLS_MODE === 'none') {
-      server   = http.createServer(app);
-      protocol = 'HTTP';
+      // ── Plain HTTP ────────────────────────────────────────────────────────
+      mainServer = http.createServer(app);
+      protocol   = 'HTTP';
 
     } else if (TLS_MODE === 'tls') {
-      server = https.createServer({
+      // ── One-way TLS ───────────────────────────────────────────────────────
+      mainServer = https.createServer({
         cert: readCert(CERT_FILE, 'Server certificate'),
         key:  readCert(KEY_FILE,  'Server private key'),
       }, app);
       protocol = 'HTTPS (one-way TLS)';
 
     } else if (TLS_MODE === 'mtls') {
-      server = https.createServer({
-        cert: readCert(CERT_FILE, 'Server certificate'),
-        key:  readCert(KEY_FILE,  'Server private key'),
-        ca:   readCert(CA_FILE,   'CA certificate'),
+      // ── Mutual TLS ────────────────────────────────────────────────────────
+      // rejectUnauthorized is intentionally false here.
+      // Enforcement is handled by mtlsEnforcer middleware above so that
+      // the TLS handshake completes for all clients (including Kubelet probers
+      // that present no cert) — the middleware then gates access per-route.
+      mainServer = https.createServer({
+        cert:               readCert(CERT_FILE, 'Server certificate'),
+        key:                readCert(KEY_FILE,  'Server private key'),
+        ca:                 readCert(CA_FILE,   'CA certificate'),
         requestCert:        true,
-        rejectUnauthorized: false, // ← intentional: enforced in mtlsEnforcer()
+        rejectUnauthorized: false,
       }, app);
       protocol = 'HTTPS (mutual TLS — probe-safe)';
 
@@ -124,19 +191,18 @@ function createServer(app, serviceName) {
       throw new Error(`Unknown TLS_MODE="${TLS_MODE}". Valid: none | tls | mtls`);
     }
 
-    server.listen(PORT, '0.0.0.0', () => {
-      console.log(`[${ts()}] ${serviceName} started`);
-      console.log(`[${ts()}] Mode: ${protocol}  |  Port: ${PORT}  |  TLS_MODE=${TLS_MODE}`);
+    mainServer.listen(PORT, '0.0.0.0', () => {
+      console.log(`[${ts()}] ${serviceName} main server    →  ${protocol}  :${PORT}  (TLS_MODE=${TLS_MODE})`);
       if (TLS_MODE !== 'none') {
         console.log(`[${ts()}] Cert dir: ${CERT_DIR}`);
-        if (TLS_MODE === 'mtls') {
-          console.log(`[${ts()}] Health probe bypass: ${[...HEALTH_PATHS].join(', ')}`);
-        }
+      }
+      if (TLS_MODE === 'mtls') {
+        console.log(`[${ts()}] mTLS bypass paths: ${[...HEALTH_PATHS].join(', ')}`);
       }
     });
 
-    server.on('error', (err) => {
-      console.error(`[${ts()}] Server error: ${err.message}`);
+    mainServer.on('error', (err) => {
+      console.error(`[${ts()}] Main server error: ${err.message}`);
       process.exit(1);
     });
 
@@ -145,7 +211,12 @@ function createServer(app, serviceName) {
     process.exit(1);
   }
 
-  return server;
+  // Always start the plain-HTTP health server regardless of TLS_MODE
+  const healthServer = startHealthServer(serviceName);
+
+  return { mainServer, healthServer };
 }
 
-module.exports = { createServer, TLS_MODE, PORT };
+// ─────────────────────────────────────────────────────────────────────────────
+
+module.exports = { createServer, TLS_MODE, PORT, HEALTH_PORT };
