@@ -6,21 +6,22 @@ const { createServer, TLS_MODE } = require('./tls-helper');
 const app = express();
 app.use(express.json());
 
-// ── Request logger ─────────────────────────────────────────────────────────
+// 1. GLOBAL LOGGER
 app.use((req, res, next) => {
   const clientIP = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-  const tlsInfo  = req.socket.encrypted
-    ? (req.socket.getPeerCertificate && req.socket.getPeerCertificate().subject
-        ? `mTLS:${req.socket.getPeerCertificate().subject.CN}`
-        : 'TLS')
+  const cert = req.socket.getPeerCertificate ? req.socket.getPeerCertificate() : null;
+  const tlsInfo = req.socket.encrypted
+    ? (cert && cert.subject ? `mTLS:${cert.subject.CN}` : 'TLS')
     : 'HTTP';
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url} - IP: ${clientIP} - ${tlsInfo}`);
   next();
 });
 
+// 2. INITIALIZE SERVER & mTLS ENFORCEMENT
+const { mainServer, healthServer } = createServer(app, 'Cricket World Cup Champions API');
+
 // ── Data ───────────────────────────────────────────────────────────────────
 const champions = [
-  // ODI World Cup
   { year: 1975, winner: "West Indies",  format: "ODI World Cup",  venue: "England" },
   { year: 1979, winner: "West Indies",  format: "ODI World Cup",  venue: "England" },
   { year: 1983, winner: "India",        format: "ODI World Cup",  venue: "England" },
@@ -34,7 +35,6 @@ const champions = [
   { year: 2015, winner: "Australia",    format: "ODI World Cup",  venue: "Australia & NZ" },
   { year: 2019, winner: "England",      format: "ODI World Cup",  venue: "England" },
   { year: 2023, winner: "Australia",    format: "ODI World Cup",  venue: "India" },
-  // T20 World Cup
   { year: 2007, winner: "India",        format: "T20 World Cup",  venue: "South Africa" },
   { year: 2009, winner: "Pakistan",     format: "T20 World Cup",  venue: "England" },
   { year: 2010, winner: "England",      format: "T20 World Cup",  venue: "West Indies" },
@@ -47,7 +47,7 @@ const champions = [
   { year: 2026, winner: "India",        format: "T20 World Cup",  venue: "India & Sri Lanka" },
 ];
 
-// ── Routes ─────────────────────────────────────────────────────────────────
+// 3. SECURED ROUTES
 app.get('/health', (req, res) => res.json({
   status:    'ok',
   service:   'Cricket World Cup Champions API',
@@ -62,6 +62,3 @@ app.get('/champions', (req, res) => {
   if (format) data = data.filter(c => c.format.toLowerCase().includes(format.toLowerCase()));
   res.json(data);
 });
-
-// ── Start server (TLS_MODE controls none / tls / mtls) ─────────────────────
-const { mainServer, healthServer } = createServer(app, 'Cricket World Cup Champions API');

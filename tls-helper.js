@@ -183,7 +183,7 @@ function createServer(app, serviceName) {
         key:                readCert(KEY_FILE,  'Server private key'),
         ca:                 readCert(CA_FILE,   'CA certificate'),
         requestCert:        true,
-        rejectUnauthorized: false,
+        rejectUnauthorized: true,
       }, app);
       protocol = 'HTTPS (mutual TLS — probe-safe)';
 

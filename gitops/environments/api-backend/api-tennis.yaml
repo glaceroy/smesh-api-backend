@@ -1,6 +1,6 @@
 image:
   repository: image-registry.openshift-image-registry.svc:5000
-  tag: v2.0
+  tag: v3.0
 
 route:
   host: tennis-api.ocp.cloud.lab
