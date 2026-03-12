@@ -6,7 +6,7 @@ ports:
   - name: https
     containerPort: 8443
   - name: health
-    containerPort: 9090
+    containerPort: 8080
     
 # ── TLS configuration ──────────────────────────────────────────────────────
 # mode:       "none"  → plain HTTP (no TLS)

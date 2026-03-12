@@ -28,10 +28,6 @@ spec:
               containerPort: {{ .containerPort }}
             {{- end }}
           env:
-            - name: PORT
-              value: {{ .Values.containerPort | quote }}
-            - name: HEALTH_PORT
-              value: {{ .Values.healthPort | quote }}
             - name: TLS_MODE
               value: {{ .Values.tls.mode | quote }}
             - name: TLS_CERT_DIR
