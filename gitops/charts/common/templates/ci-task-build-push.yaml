@@ -1,0 +1,59 @@
+{{- if .Values.ci.enabled }}
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: {{ include "common-api.fullname" . }}-build-and-push
+  namespace: {{ .Release.Namespace }}
+spec:
+  params:
+  - name: git-url
+    type: string
+    default: {{ .Values.ci.git.url | quote }}
+  - name: git-revision
+    type: string
+    default: {{ .Values.ci.git.revision | quote }}
+  - name: image
+    type: string
+    # matches Deployment image base: repo/namespace/app-name
+    default: "{{ .Values.image.repository }}/{{ .Release.Namespace }}/{{ include "common-api.fullname" . }}"
+
+  workspaces:
+  - name: source
+
+  steps:
+  - name: git-clone
+    image: quay.io/gitops-tools/tekton-git-clone:latest
+    script: |
+      set -eux
+      git clone "$(params.git-url)" /workspace/source
+      cd /workspace/source
+      git checkout "$(params.git-revision)"
+
+  - name: build-and-push
+    image: quay.io/buildah/stable
+    securityContext:
+      privileged: true
+    env:
+    - name: BUILDAH_ISOLATION
+      value: chroot
+    script: |
+      set -eux
+      cd /workspace/source
+
+      # Optional: per-app context directory
+      {{- if .Values.ci.build.contextDir }}
+      cd "{{ .Values.ci.build.contextDir }}"
+      {{- end }}
+
+      TAG=$(date +%Y%m%d-%H%M%S)
+      DEST="$(params.image):${TAG}"
+
+      echo ">> Building image ${DEST}"
+      buildah bud --storage-driver=vfs -t "${DEST}" .
+
+      echo ">> Pushing image ${DEST}"
+      buildah push --tls-verify=false "${DEST}" "docker://${DEST}"
+
+      # expose for next task
+      echo "${DEST}" > /workspace/source/image.txt
+{{- end }}

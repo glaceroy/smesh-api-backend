@@ -20,3 +20,7 @@ certificate:
   issuerKind: ClusterIssuer
   keyAlgorithm: RSA
   keySize: 2048
+
+ci:
+  build:
+    contextDir: api-tennis

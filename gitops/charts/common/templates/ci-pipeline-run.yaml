@@ -1,0 +1,28 @@
+{{- if .Values.ci.enabled }}
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: {{ include "common-api.fullname" . }}-ci-run
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  pipelineRef:
+    name: {{ include "common-api.fullname" . }}-ci
+  serviceAccountName: {{ .Values.ci.tekton.serviceAccountName | default "builder" }}
+  workspaces:
+  - name: shared-workspace
+    volumeClaimTemplate:
+      metadata:
+        name: {{ include "common-api.fullname" . }}-ci-ws
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi
+  params:
+  - name: git-url
+    value: {{ .Values.ci.git.url | quote }}
+  - name: git-revision
+    value: {{ .Values.ci.git.revision | quote }}
+{{- end }}

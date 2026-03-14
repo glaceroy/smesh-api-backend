@@ -1,0 +1,70 @@
+{{- if .Values.ci.enabled }}
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: {{ include "common-api.fullname" . }}-update-manifests
+  namespace: {{ .Release.Namespace }}
+spec:
+  params:
+  - name: git-url
+    type: string
+    default: {{ .Values.ci.git.url | quote }}
+  - name: git-revision
+    type: string
+    default: {{ .Values.ci.git.revision | quote }}
+  - name: git-user-name
+    type: string
+    default: {{ .Values.ci.git.userName | quote }}
+  - name: git-user-email
+    type: string
+    default: {{ .Values.ci.git.userEmail | quote }}
+
+  workspaces:
+  - name: source
+
+  steps:
+  - name: git-config
+    image: quay.io/gitops-tools/tekton-git-clone:latest
+    script: |
+      set -eux
+      cd /workspace/source
+      git config user.name "$(params.git-user-name)"
+      git config user.email "$(params.git-user-email)"
+
+  - name: parse-image
+    image: quay.io/gitops-tools/yq:latest
+    env:
+    - name: VALUES_FILE
+      value: "environments/api-backend/{{ include "common-api.fullname" . }}.yaml"
+    script: |
+      set -eux
+      cd /workspace/source
+
+      # Read full image ref produced by previous Task
+      FULL_IMAGE="$(cat image.txt)"
+      echo ">> New image: ${FULL_IMAGE}"
+
+      # Extract just the tag part after the last ':'
+      NEW_TAG="${FULL_IMAGE##*:}"
+      echo ">> New tag: ${NEW_TAG}"
+
+      export NEW_TAG
+      # update only .image.tag in the app values file
+      yq -i '.image.tag = env(NEW_TAG)' "${VALUES_FILE}"
+
+  - name: git-commit-push
+    image: quay.io/gitops-tools/tekton-git-clone:latest
+    env:
+    - name: GIT_SSH_COMMAND
+      value: "ssh -o StrictHostKeyChecking=no"
+    script: |
+      set -eux
+      cd /workspace/source
+      if git status --porcelain | grep .; then
+        git add environments/api-backend/{{ include "common-api.fullname" . }}.yaml
+        git commit -m "Update {{ include "common-api.fullname" . }} image tag"
+        git push origin "$(params.git-revision)"
+      else
+        echo ">> No changes to commit"
+      fi
+{{- end }}

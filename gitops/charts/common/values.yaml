@@ -58,3 +58,13 @@ livenessProbe:
     scheme: HTTP
   initialDelaySeconds: 15
   periodSeconds: 20
+
+ci:
+  enabled: true
+  git:
+    url: git@github.com:glaceroy/smesh-api-backend.git
+    revision: main
+    userName: "ci-bot"
+    userEmail: "ci-bot@example.com"
+  tekton:
+    serviceAccountName: builder

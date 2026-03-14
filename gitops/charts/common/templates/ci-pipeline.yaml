@@ -1,0 +1,45 @@
+{{- if .Values.ci.enabled }}
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: {{ include "common-api.fullname" . }}-ci
+  namespace: {{ .Release.Namespace }}
+spec:
+  workspaces:
+  - name: shared-workspace
+
+  params:
+  - name: git-url
+    type: string
+    default: {{ .Values.ci.git.url | quote }}
+  - name: git-revision
+    type: string
+    default: {{ .Values.ci.git.revision | quote }}
+
+  tasks:
+  - name: build-and-push
+    taskRef:
+      name: {{ include "common-api.fullname" . }}-build-and-push
+    params:
+    - name: git-url
+      value: $(params.git-url)
+    - name: git-revision
+      value: $(params.git-revision)
+    workspaces:
+    - name: source
+      workspace: shared-workspace
+
+  - name: update-manifests
+    runAfter:
+    - build-and-push
+    taskRef:
+      name: {{ include "common-api.fullname" . }}-update-manifests
+    params:
+    - name: git-url
+      value: $(params.git-url)
+    - name: git-revision
+      value: $(params.git-revision)
+    workspaces:
+    - name: source
+      workspace: shared-workspace
+{{- end }}
