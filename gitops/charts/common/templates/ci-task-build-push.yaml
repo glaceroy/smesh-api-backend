@@ -14,7 +14,6 @@ spec:
     default: {{ .Values.ci.git.revision | quote }}
   - name: image
     type: string
-    # matches Deployment image base: repo/namespace/app-name
     default: "{{ .Values.image.repository }}/{{ .Release.Namespace }}/{{ include "common-api.fullname" . }}"
 
   workspaces:

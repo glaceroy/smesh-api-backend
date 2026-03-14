@@ -45,6 +45,7 @@ const champions = [
   { year: 2022, winner: "England",      format: "T20 World Cup",  venue: "Australia" },
   { year: 2024, winner: "India",        format: "T20 World Cup",  venue: "West Indies & USA" },
   { year: 2026, winner: "India",        format: "T20 World Cup",  venue: "India & Sri Lanka" },
+  { year: 2028, winner: "India",        format: "T20 World Cup",  venue: "Australia" },
 ];
 
 // 3. SECURED ROUTES
