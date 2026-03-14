@@ -19,6 +19,7 @@ spec:
   tasks:
   - name: build-and-push
     taskRef:
+      kind: Task
       name: {{ include "common-api.fullname" . }}-build-and-push
     params:
     - name: git-url
@@ -33,6 +34,7 @@ spec:
     runAfter:
     - build-and-push
     taskRef:
+      kind: Task
       name: {{ include "common-api.fullname" . }}-update-manifests
     params:
     - name: git-url
