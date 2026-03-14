@@ -1,0 +1,16 @@
+{{- if and .Values.ci.enabled .Values.ci.triggers.enabled }}
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: {{ include "common-api.fullname" . }}-github-listener
+  namespace: {{ .Release.Namespace }}
+spec:
+  to:
+    kind: Service
+    name: el-{{ include "common-api.fullname" . }}-github-listener
+  port:
+    targetPort: http-listener
+  tls:
+    termination: edge
+  wildcardPolicy: None
+{{- end }}

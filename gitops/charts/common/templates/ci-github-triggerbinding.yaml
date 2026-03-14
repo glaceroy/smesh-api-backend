@@ -1,0 +1,13 @@
+{{- if and .Values.ci.enabled .Values.ci.triggers.enabled }}
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerBinding
+metadata:
+  name: {{ include "common-api.fullname" . }}-github-push-binding
+  namespace: {{ .Release.Namespace }}
+spec:
+  params:
+  - name: git-url
+    value: $(body.repository.ssh_url)
+  - name: git-revision
+    value: $(body.ref)
+{{- end }}

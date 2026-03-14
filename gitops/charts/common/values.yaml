@@ -68,3 +68,5 @@ ci:
     userEmail: "ci-bot@example.com"
   tekton:
     serviceAccountName: builder
+  triggers:
+    enabled: true

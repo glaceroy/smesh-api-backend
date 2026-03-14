@@ -1,0 +1,32 @@
+{{- if and .Values.ci.enabled .Values.ci.triggers.enabled }}
+apiVersion: triggers.tekton.dev/v1beta1
+kind: EventListener
+metadata:
+  name: {{ include "common-api.fullname" . }}-github-listener
+  namespace: {{ .Release.Namespace }}
+spec:
+  serviceAccountName: {{ .Values.ci.tekton.serviceAccountName | default "builder" }}
+  triggers:
+  - name: github-push-main
+    interceptors:
+    - ref:
+        name: github
+      params:
+      - name: secretRef
+        value:
+          secretName: {{ include "common-api.fullname" . }}-github-webhook-secret
+          secretKey: secret
+      - name: eventTypes
+        value:
+        - push
+    - ref:
+        name: cel
+      params:
+      - name: filter
+        # Only trigger for pushes to main; adjust if needed.
+        value: "body.ref == 'refs/heads/main'"
+    bindings:
+    - ref: {{ include "common-api.fullname" . }}-github-push-binding
+    template:
+      ref: {{ include "common-api.fullname" . }}-ci-template
+{{- end }}
