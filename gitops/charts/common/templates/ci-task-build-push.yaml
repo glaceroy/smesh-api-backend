@@ -21,7 +21,8 @@ spec:
   - name: source
 
   steps:
-  - name: git-clone
+  - computeResources: {}
+    name: git-clone
     image: quay.io/gitops-tools/tekton-git-clone:latest
     script: |
       set -eux
@@ -29,7 +30,8 @@ spec:
       cd /workspace/source
       git checkout "$(params.git-revision)"
 
-  - name: build-and-push
+  - computeResources: {}
+    name: build-and-push
     image: quay.io/buildah/stable
     securityContext:
       privileged: true

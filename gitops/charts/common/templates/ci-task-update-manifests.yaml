@@ -23,7 +23,8 @@ spec:
   - name: source
 
   steps:
-  - name: git-config
+  - computeResources: {}
+    name: git-config
     image: quay.io/gitops-tools/tekton-git-clone:latest
     script: |
       set -eux
@@ -31,7 +32,8 @@ spec:
       git config user.name "$(params.git-user-name)"
       git config user.email "$(params.git-user-email)"
 
-  - name: parse-image
+  - computeResources: {}
+    name: parse-image
     image: quay.io/gitops-tools/yq:latest
     env:
     - name: VALUES_FILE
@@ -52,7 +54,8 @@ spec:
       # update only .image.tag in the app values file
       yq -i '.image.tag = env(NEW_TAG)' "${VALUES_FILE}"
 
-  - name: git-commit-push
+  - computeResources: {}
+    name: git-commit-push
     image: quay.io/gitops-tools/tekton-git-clone:latest
     env:
     - name: GIT_SSH_COMMAND
